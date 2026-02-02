@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS tickets
         CHECK (participant_email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 );
 -- Partial unique index to enforce only one ACTIVE ticket per user per event
-CREATE UNIQUE INDEX idx_unique_active_ticket_per_user_event 
-    ON tickets (event_id, user_id) 
+CREATE UNIQUE INDEX idx_unique_active_ticket_per_user_event
+    ON tickets (event_id, user_id)
     WHERE status = 'ACTIVE';
 CREATE INDEX idx_tickets_event_id ON tickets (event_id);
 CREATE INDEX idx_tickets_user_id ON tickets (user_id);

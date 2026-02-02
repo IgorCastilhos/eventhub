@@ -54,4 +54,3 @@ COMMENT ON COLUMN users.role IS 'User role (USER or ADMIN)';
 COMMENT ON COLUMN users.enabled IS 'Account enabled status';
 COMMENT ON COLUMN users.account_non_locked IS 'Account lock status';
 
-
