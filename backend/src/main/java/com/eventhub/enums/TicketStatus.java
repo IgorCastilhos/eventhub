@@ -13,6 +13,14 @@ public enum TicketStatus {
         return this == USED;
     }
 
+    public boolean isCancelled() {
+        return this == CANCELLED;
+    }
+
+    public boolean canBeCancelled() {
+        return this == ACTIVE;
+    }
+
     public boolean canBeUsed() {
         return this == ACTIVE;
     }
