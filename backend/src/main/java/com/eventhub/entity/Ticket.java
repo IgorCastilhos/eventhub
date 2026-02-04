@@ -34,7 +34,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = {"event", "user"}) // Prevent circular references in logs
+@ToString(exclude = {"event", "user"})
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Ticket {
 
@@ -131,7 +131,22 @@ public class Ticket {
 
         this.status = TicketStatus.CANCELLED;
 
-        event.cancelReservation();
+        // Trigger no banco irá restaurar a capacidade automaticamente
+    }
+
+    public void validateCanBeCancelled() {
+        if (!status.canBeCancelled()) {
+            throw new IllegalStateException(
+                    "Cannot cancel ticket with status: " + status +
+                            ". Only ACTIVE tickets can be cancelled."
+            );
+        }
+
+        if (event.isPast()) {
+            throw new IllegalStateException(
+                    "Cannot cancel ticket for past event: " + event.getName()
+            );
+        }
     }
 
     public boolean isActive() {

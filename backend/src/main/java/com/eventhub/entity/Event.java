@@ -1,11 +1,13 @@
 package com.eventhub.entity;
 
+import com.eventhub.enums.EventStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -51,11 +53,23 @@ public class Event {
 
     @Column(name = "available_capacity", nullable = false)
     private Integer availableCapacity;
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal price;
+
+    @Column(name = "image_url", length = 2048)
+    private String imageUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private EventStatus status;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
@@ -68,6 +82,14 @@ public class Event {
         if (this.availableCapacity == null) {
             this.availableCapacity = this.capacity;
         }
+
+        if (this.price == null) {
+            this.price = BigDecimal.ZERO;
+        }
+
+        if (this.status == null) {
+            this.status = EventStatus.SCHEDULED;
+        }
     }
 
     @PreUpdate
@@ -79,23 +101,52 @@ public class Event {
     public void reserveTicket() {
         if (this.availableCapacity <= 0) {
             throw new IllegalStateException(
-                    "Event '%s' is sold out (capacity: %d)".formatted(this.name, this.capacity)
+                    "Evento '%s' esgotado (capacidade: %d)".formatted(this.name, this.capacity)
             );
         }
 
         if (this.eventDate.isBefore(LocalDateTime.now())) {
             throw new IllegalStateException(
-                    "Cannot reserve ticket for past event '%s'".formatted(this.name)
+                    "Não é possível reservar ingresso para evento passado '%s'".formatted(this.name)
             );
         }
 
         this.availableCapacity--;
     }
 
+    /**
+     * Reserve capacity for a ticket purchase.
+     * Alias for reserveTicket() for semantic clarity.
+     */
+    public void reserveCapacity() {
+        reserveTicket();
+    }
+
+    /**
+     * Check if the event has available capacity.
+     *
+     * @return true if tickets are available
+     */
+    public boolean hasAvailableCapacity() {
+        return this.availableCapacity > 0;
+    }
+
+    /**
+     * Update the event name with validation.
+     *
+     * @param newName the new name for the event
+     */
+    public void updateName(String newName) {
+        if (newName == null || newName.isBlank()) {
+            throw new IllegalArgumentException("Nome do evento não pode estar vazio");
+        }
+        this.name = newName.trim();
+    }
+
     public void cancelReservation() {
         if (this.availableCapacity >= this.capacity) {
             throw new IllegalStateException(
-                    "Cannot cancel reservation: capacity already at maximum"
+                    "Não é possível cancelar reserva: capacidade já está no máximo"
             );
         }
 
