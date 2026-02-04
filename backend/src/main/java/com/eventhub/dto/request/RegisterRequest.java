@@ -9,24 +9,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record RegisterRequest(
-        @NotBlank(message = "Username is required")
-        @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
+        @NotBlank(message = "Usuário é obrigatório")
+        @Size(min = 3, max = 50, message = "Usuário deve ter entre 3 e 50 caracteres")
         @Pattern(
                 regexp = "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
-                message = "Username must start with alphanumeric and contain only letters, numbers, underscore, and hyphen"
+                message = "Usuário deve começar com letra ou número e conter apenas letras, números, underscore e hífen"
         )
         String username,
 
-        @NotBlank(message = "Email is required")
-        @Email(message = "Email must be valid")
-        @Size(max = 255, message = "Email must not exceed 255 characters")
+        @NotBlank(message = "E-mail é obrigatório")
+        @Email(message = "E-mail deve ser válido")
+        @Size(max = 255, message = "E-mail não pode exceder 255 caracteres")
         String email,
 
-        @NotBlank(message = "Password is required")
-        @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
+        @NotBlank(message = "Senha é obrigatória")
+        @Size(min = 8, max = 100, message = "Senha deve ter entre 8 e 100 caracteres")
         @Pattern(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,100}$",
-                message = "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character (@$!%*?&)"
+                message = "Senha deve conter pelo menos uma letra maiúscula, uma letra minúscula, um número e um caractere especial (@$!%*?&)"
         )
         String password
 ) {
@@ -50,16 +50,16 @@ public record RegisterRequest(
 
         for (String common : commonPasswords) {
             if (lowerPassword.contains(common)) {
-                errors.add("Password is too common or weak: " + common);
+                errors.add("Senha muito comum ou fraca: " + common);
             }
         }
 
         if (username != null && lowerPassword.contains(username.toLowerCase())) {
-            errors.add("Password should not contain the username");
+            errors.add("Senha não deve conter o nome de usuário");
         }
 
         if (lowerPassword.contains("abc") || lowerPassword.contains("1234")) {
-            errors.add("Password should not contain sequential characters");
+            errors.add("Senha não deve conter caracteres sequenciais");
         }
 
         return errors;

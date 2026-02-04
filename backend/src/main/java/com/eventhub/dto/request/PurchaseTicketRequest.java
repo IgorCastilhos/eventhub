@@ -8,14 +8,14 @@ import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
 public record PurchaseTicketRequest(
-        @NotNull(message = "Event ID is required")
+        @NotNull(message = "ID do evento é obrigatório")
         UUID eventId,
-        @NotBlank(message = "Participant name is required")
-        @Size(min = 2, max = 255, message = "Participant name must be between 2 and 255 characters")
+        @NotBlank(message = "Nome do participante é obrigatório")
+        @Size(min = 2, max = 255, message = "Nome do participante deve ter entre 2 e 255 caracteres")
         String participantName,
-        @NotBlank(message = "Participant email is required")
-        @Email(message = "Participant email must be a valid email address")
-        @Size(max = 255, message = "Participant email must not exceed 255 characters")
+        @NotBlank(message = "E-mail do participante é obrigatório")
+        @Email(message = "E-mail do participante deve ser válido")
+        @Size(max = 255, message = "E-mail do participante não pode exceder 255 caracteres")
         String participantEmail
 ) {
     public String getNormalizedParticipantEmail() {

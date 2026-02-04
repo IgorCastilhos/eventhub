@@ -1,31 +1,36 @@
 package com.eventhub.dto.request;
 
-import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record UpdateEventRequest(
-        @Size(min = 3, max = 200, message = "Event name must be between 3 and 200 characters")
+        @Size(min = 3, max = 200, message = "Nome do evento deve ter entre 3 e 200 caracteres")
         String name,
-        @Size(min = 10, max = 5000, message = "Event description must be between 10 and 5000 characters")
+        @Size(min = 10, max = 5000, message = "Descrição do evento deve ter entre 10 e 5000 caracteres")
         String description,
-        @Future(message = "Event date must be in the future")
+        @Future(message = "Data do evento deve estar no futuro")
         LocalDateTime eventDate,
-        @Size(min = 3, max = 300, message = "Event location must be between 3 and 300 characters")
+        @Size(min = 3, max = 300, message = "Local do evento deve ter entre 3 e 300 caracteres")
         String location,
-        @Min(value = 1, message = "Event capacity must be at least 1")
-        @Max(value = 100000, message = "Event capacity must not exceed 100,000")
-        Integer capacity
+        @Min(value = 1, message = "Capacidade do evento deve ser no mínimo 1")
+        @Max(value = 100000, message = "Capacidade do evento não pode exceder 100.000")
+        Integer capacity,
+        @DecimalMin(value = "0.00", message = "Preço do evento deve ser zero ou positivo")
+        @DecimalMax(value = "1000000.00", message = "Preço do evento não pode exceder 1.000.000")
+        BigDecimal price,
+        @Size(max = 2048, message = "URL da imagem não pode exceder 2048 caracteres")
+        String imageUrl
 ) {
     public boolean hasAnyUpdate() {
         return name != null ||
                 description != null ||
                 eventDate != null ||
                 location != null ||
-                capacity != null;
+                capacity != null ||
+                price != null ||
+                imageUrl != null;
     }
 
     public boolean hasCriticalUpdates() {
@@ -33,7 +38,7 @@ public record UpdateEventRequest(
     }
 
     public boolean hasMinorUpdatesOnly() {
-        return (name != null || description != null) &&
+        return (name != null || description != null || price != null || imageUrl != null) &&
                 eventDate == null &&
                 location == null &&
                 capacity == null;
@@ -71,6 +76,8 @@ public record UpdateEventRequest(
         if (eventDate != null) changed.add("eventDate");
         if (location != null) changed.add("location");
         if (capacity != null) changed.add("capacity");
+        if (price != null) changed.add("price");
+        if (imageUrl != null) changed.add("imageUrl");
         return changed;
     }
 }

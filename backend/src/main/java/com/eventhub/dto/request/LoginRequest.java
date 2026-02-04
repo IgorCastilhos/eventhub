@@ -4,12 +4,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record LoginRequest(
-        @NotBlank(message = "Username is required")
-        @Size(min = 3, max = 255, message = "Username must be between 3 and 255 characters")
+        @NotBlank(message = "Usuário é obrigatório")
+        @Size(min = 3, max = 255, message = "Usuário deve ter entre 3 e 255 caracteres")
         String username,
 
-        @NotBlank(message = "Password is required")
-        @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
+        @NotBlank(message = "Senha é obrigatória")
+        @Size(min = 6, max = 100, message = "Senha deve ter entre 6 e 100 caracteres")
         String password
 ) {
     public String getNormalizedUsername() {
