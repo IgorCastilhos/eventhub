@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS tickets
     status            VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE',
     purchase_date     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     confirmation_code VARCHAR(10)  NOT NULL UNIQUE,
+    check_in_at       TIMESTAMP    NULL,     -- Timestamp when the ticket was checked in at the event
     created_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_ticket_event
@@ -35,6 +36,7 @@ CREATE INDEX idx_tickets_confirmation_code ON tickets (confirmation_code);
 CREATE INDEX idx_tickets_status ON tickets (status);
 CREATE INDEX idx_tickets_user_status ON tickets (user_id, status);
 CREATE INDEX idx_tickets_event_status ON tickets (event_id, status);
+CREATE INDEX idx_tickets_check_in_at ON tickets (check_in_at) WHERE check_in_at IS NOT NULL;
 CREATE TRIGGER update_tickets_updated_at
     BEFORE UPDATE
     ON tickets

@@ -38,11 +38,20 @@ CREATE TRIGGER update_users_updated_at
 EXECUTE FUNCTION update_updated_at_column();
 
 
+-- Admin user (password: admin123)
 INSERT INTO users (username, email, password_hash, role)
 VALUES ('admin',
         'admin@eventhub.com',
-        '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5Ak5gO6QWRE8i',
+        '$2a$12$EMrkvoaGHy1dy2AJu/jId.WuQc/gBQeAusgRLKxPX72UC5pvJa28.',
         'ADMIN')
+ON CONFLICT (username) DO NOTHING;
+
+-- Regular user (password: user123)
+INSERT INTO users (username, email, password_hash, role)
+VALUES ('user',
+        'user@eventhub.com',
+        '$2a$12$p3.AIyTSb/IL3clFYg8W8eMIE3N96P8J6a8fxsWVZTvrZufmXDkmK',
+        'USER')
 ON CONFLICT (username) DO NOTHING;
 
 COMMENT ON TABLE users IS 'User authentication and profile information';
