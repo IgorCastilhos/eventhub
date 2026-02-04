@@ -25,7 +25,7 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException ex,
             WebRequest request
     ) {
-        log.debug("Validation error: {}", ex.getMessage());
+        log.debug("Erro de validação: {}", ex.getMessage());
         Map<String, String> fieldErrors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach(error -> {
             String fieldName = ((FieldError) error).getField();
@@ -34,8 +34,8 @@ public class GlobalExceptionHandler {
         });
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
-                "Bad Request",
-                "Validation failed",
+                "Requisição Inválida",
+                "Falha na validação dos dados",
                 request.getDescription(false).replace("uri=", ""),
                 fieldErrors
         );
@@ -85,11 +85,11 @@ public class GlobalExceptionHandler {
             BadCredentialsException ex,
             WebRequest request
     ) {
-        log.info("Authentication failed: {}", ex.getMessage());
+        log.info("Falha na autenticação: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
-                "Unauthorized",
-                "Invalid credentials",  // Generic message
+                "Não Autorizado",
+                "Credenciais inválidas",
                 request.getDescription(false).replace("uri=", ""),
                 null
         );
@@ -103,11 +103,11 @@ public class GlobalExceptionHandler {
             AccessDeniedException ex,
             WebRequest request
     ) {
-        log.warn("Access denied: {}", ex.getMessage());
+        log.warn("Acesso negado: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.FORBIDDEN.value(),
-                "Forbidden",
-                "Access denied",
+                "Proibido",
+                "Acesso negado",
                 request.getDescription(false).replace("uri=", ""),
                 null
         );
@@ -121,11 +121,11 @@ public class GlobalExceptionHandler {
             ObjectOptimisticLockingFailureException ex,
             WebRequest request
     ) {
-        log.warn("Optimistic locking failure: {}", ex.getMessage());
+        log.warn("Falha de bloqueio otimista: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
-                "Conflict",
-                "Resource was modified by another request. Please try again.",
+                "Conflito",
+                "O recurso foi modificado por outra requisição. Por favor, tente novamente.",
                 request.getDescription(false).replace("uri=", ""),
                 null
         );
@@ -139,10 +139,10 @@ public class GlobalExceptionHandler {
             InsufficientCapacityException ex,
             WebRequest request
     ) {
-        log.warn("Insufficient capacity: {}", ex.getMessage());
+        log.warn("Capacidade insuficiente: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
-                "Conflict",
+                "Conflito",
                 ex.getMessage(),
                 request.getDescription(false).replace("uri=", ""),
                 null
@@ -157,11 +157,11 @@ public class GlobalExceptionHandler {
             Exception ex,
             WebRequest request
     ) {
-        log.error("Unexpected error", ex);
+        log.error("Erro inesperado", ex);
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Internal Server Error",
-                "An error occurred. Please try again later.",  // Generic message
+                "Erro Interno do Servidor",
+                "Ocorreu um erro. Por favor, tente novamente mais tarde.",
                 request.getDescription(false).replace("uri=", ""),
                 null
         );
