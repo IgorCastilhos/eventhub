@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EventHub Color Palette
+   ═══════════════════════════════════════════════════════════════════════════
+   - Blue Navy (#0A1A40): Títulos / textos fortes / backgrounds escuros
+   - Corporate Blue (#1A3EA1): Links, botões principais
+   - Neutral White (#FFFFFF): Fundo principal / espaços limpos
+   - Dark Gray (#333333): Texto secundário / ícones
+   - Light Gray (#F5F5F5): Seções de fundo / bordas
+   - Accent Green (#2F8F4E): Botões de ação / destaques secundários
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5F5F5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1A3EA1;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Base styles */
+body {
+  @apply bg-[#F5F5F5] text-[#333333] antialiased;
+}
