@@ -18,10 +18,10 @@ import java.util.Map;
 public class JwtTokenProvider {
 
 
-    @Value("${jwt.secret}")
+    @Value("${application.jwt.secret}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration:86400000}")
+    @Value("${application.jwt.expiration:86400000}")
     private Long jwtExpirationMs;
 
     public String generateToken(User user) {
