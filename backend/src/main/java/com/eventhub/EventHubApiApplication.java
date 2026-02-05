@@ -1,4 +1,4 @@
-package com.eventhub.spring_boot_starter_parent;
+package com.eventhub;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

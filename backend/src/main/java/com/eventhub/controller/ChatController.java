@@ -30,15 +30,21 @@ public class ChatController {
         if (request.message() == null || request.message().isBlank()) {
             return ResponseEntity
                     .badRequest()
-                    .body(new ChatResponse("Please provide a message"));
+                    .body(new ChatResponse("Please provide a message", "error"));
         }
         String aiResponse = chatService.chat(request.message());
-        return ResponseEntity.ok(new ChatResponse(aiResponse));
+
+        // Generate a simple conversation ID (could be more sophisticated)
+        String conversationId = request.conversationId() != null
+            ? request.conversationId()
+            : java.util.UUID.randomUUID().toString();
+
+        return ResponseEntity.ok(new ChatResponse(aiResponse, conversationId));
     }
 
-    public record ChatRequest(String message) {
+    public record ChatRequest(String message, String conversationId) {
     }
 
-    public record ChatResponse(String response) {
+    public record ChatResponse(String response, String conversationId) {
     }
 }
