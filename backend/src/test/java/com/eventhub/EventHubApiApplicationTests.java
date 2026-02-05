@@ -1,4 +1,4 @@
-package com.eventhub.spring_boot_starter_parent;
+package com.eventhub;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
