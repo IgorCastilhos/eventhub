@@ -9,6 +9,9 @@ import com.eventhub.exception.BusinessException;
 import com.eventhub.repository.EventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,15 +30,16 @@ public class EventService {
 
 
     @Transactional
+    @CacheEvict(value = "events", allEntries = true)
     public EventResponse createEvent(CreateEventRequest request) {
-        log.info("Creating event: {}", request.name());
+        log.info("Criando evento: {}", request.name());
         if (request.eventDate().isBefore(LocalDateTime.now())) {
             throw new BusinessException(
-                    "Event date must be in the future"
+                    "Data do evento deve estar no futuro"
             );
         }
         if (eventRepository.existsByName(request.name())) {
-            log.warn("Event with similar name already exists: {}", request.name());
+            log.warn("Evento com nome similar já existe: {}", request.name());
         }
         Event event = Event.builder()
                 .name(request.name())
@@ -44,20 +48,23 @@ public class EventService {
                 .location(request.location())
                 .capacity(request.capacity())
                 .availableCapacity(request.capacity())
+                .price(request.price())
+                .imageUrl(request.imageUrl())
                 .build();
         Event saved = eventRepository.save(event);
-        log.info("Event created successfully: {} (ID: {})",
+        log.info("Evento criado com sucesso: {} (ID: {})",
                 saved.getName(), saved.getId());
         return EventResponse.fromEntity(saved);
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "events", key = "#id")
     public EventResponse getEventById(UUID id) {
-        log.debug("Fetching event by ID: {}", id);
+        log.debug("Buscando evento por ID: {}", id);
 
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Event not found with ID: " + id
+                        "Evento não encontrado com ID: " + id
                 ));
 
         return EventResponse.fromEntity(event);
@@ -110,19 +117,23 @@ public class EventService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "events", key = "#id"),
+        @CacheEvict(value = "events", allEntries = true)
+    })
     public EventResponse updateEvent(UUID id, UpdateEventRequest request) {
-        log.info("Updating event: {}", id);
+        log.info("Atualizando evento: {}", id);
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Event not found with ID: " + id
+                        "Evento não encontrado com ID: " + id
                 ));
         if (event.isPast()) {
             throw new BusinessException(
-                    "Cannot update events that have already occurred"
+                    "Não é possível atualizar eventos que já ocorreram"
             );
         }
         if (!request.hasAnyUpdate()) {
-            throw new BusinessException("No fields to update");
+            throw new BusinessException("Nenhum campo para atualizar");
         }
         if (request.name() != null) {
             event.updateName(request.name());
@@ -143,6 +154,12 @@ public class EventService {
         }
         if (request.capacity() != null) {
             updateCapacity(event, request);
+        }
+        if (request.price() != null) {
+            event.setPrice(request.price());
+        }
+        if (request.imageUrl() != null) {
+            event.setImageUrl(request.imageUrl());
         }
         Event updated = eventRepository.save(event);
         log.info("Event updated successfully: {} (ID: {})",
@@ -172,31 +189,35 @@ public class EventService {
 
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "events", key = "#id"),
+        @CacheEvict(value = "events", allEntries = true)
+    })
     public void deleteEvent(UUID id) {
-        log.info("Deleting event: {}", id);
+        log.info("Excluindo evento: {}", id);
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Event not found with ID: " + id
+                        "Evento não encontrado com ID: " + id
                 ));
         int ticketsSold = event.getCapacity() - event.getAvailableCapacity();
         if (ticketsSold > 0) {
             throw new BusinessException(
                     String.format(
-                            "Cannot delete event with sold tickets. " +
-                                    "%d tickets have been sold. " +
-                                    "Consider cancelling the event instead.",
+                            "Não é possível excluir evento com ingressos vendidos. " +
+                                    "%d ingressos foram vendidos. " +
+                                    "Considere cancelar o evento ao invés de excluí-lo.",
                             ticketsSold
                     )
             );
         }
         eventRepository.delete(event);
-        log.info("Event deleted successfully: {}", event.getName());
+        log.info("Evento excluído com sucesso: {}", event.getName());
     }
 
     private Event findEventById(UUID id) {
         return eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Event not found with ID: " + id
+                        "Evento não encontrado com ID: " + id
                 ));
     }
 }

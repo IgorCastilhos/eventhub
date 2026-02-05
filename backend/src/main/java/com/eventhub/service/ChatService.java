@@ -33,17 +33,19 @@ public class ChatService {
 
     @Transactional(readOnly = true)
     public String chat(String userMessage) {
-        log.info("Processing chat message: {}", userMessage);
+        log.info("Processando mensagem do chat: {}", userMessage);
         try {
             String context = buildEventContext();
             String prompt = buildPrompt(context, userMessage);
             String response = callOllama(prompt);
-            log.info("Chat response generated successfully");
+            log.info("Resposta do chat gerada com sucesso");
             return response;
         } catch (Exception e) {
-            log.error("Error generating chat response", e);
-            return "I'm sorry, I'm having trouble connecting to my AI brain right now. " +
-                    "Please try again later or browse our events directly!";
+            log.error("Erro ao gerar resposta do chat no Ollama em {}: {}",
+                ollamaBaseUrl, e.getMessage(), e);
+            return "Desculpe, estou tendo problemas para me conectar ao meu cérebro de IA agora. " +
+                    "Por favor, tente novamente mais tarde ou navegue pelos eventos diretamente!\n\n" +
+                    "Detalhes técnicos: " + e.getMessage();
         }
     }
 
@@ -58,18 +60,18 @@ public class ChatService {
                 .limit(10)
                 .toList();
         if (events.isEmpty()) {
-            return "Currently, there are no upcoming events scheduled.";
+            return "Atualmente, não há eventos programados.";
         }
         StringBuilder context = new StringBuilder();
-        context.append("Here are the upcoming events:\n\n");
+        context.append("Aqui estão os próximos eventos:\n\n");
         for (int i = 0; i < events.size(); i++) {
             Event event = events.get(i);
             context.append(String.format(
-                    "Event %d: %s\n" +
-                            "Date: %s\n" +
-                            "Location: %s\n" +
-                            "Capacity: %d/%d seats available\n" +
-                            "Description: %s\n\n",
+                    "Evento %d: %s\n" +
+                            "Data: %s\n" +
+                            "Local: %s\n" +
+                            "Capacidade: %d/%d lugares disponíveis\n" +
+                            "Descrição: %s\n\n",
                     i + 1,
                     event.getName(),
                     event.getEventDate().format(DATE_FORMATTER),
@@ -85,16 +87,20 @@ public class ChatService {
     private String buildPrompt(String context, String userMessage) {
         return String.format(
                 """
-                        You are a helpful event assistant for EventHub, an event ticketing platform.
-                        Your job is to help users find and learn about upcoming events.
+                        Você é um assistente virtual útil do EventHub, uma plataforma de venda de ingressos para eventos.
+                        Seu trabalho é ajudar os usuários a encontrar e aprender sobre os próximos eventos.
+                        
+                        IMPORTANTE: Responda SEMPRE em português brasileiro de forma clara, amigável e concisa.
                         
                         %s
                         
-                        User question: %s
+                        Pergunta do usuário: %s
                         
-                        Provide a friendly, concise response based on the available events.
-                        If the user asks about something not in the event list, politely let them know
-                        and suggest they check back later or browse the full event catalog.
+                        Forneça uma resposta amigável e concisa baseada nos eventos disponíveis.
+                        Se o usuário perguntar sobre algo que não está na lista de eventos, informe educadamente
+                        e sugira que ele verifique novamente mais tarde ou navegue pelo catálogo completo de eventos.
+                        
+                        Use emojis quando apropriado para tornar a conversa mais amigável. 😊
                         """,
                 context,
                 userMessage
@@ -106,19 +112,35 @@ public class ChatService {
         Map<String, Object> request = Map.of(
                 "model", ollamaModel,
                 "prompt", prompt,
-                "stream", false
+                "stream", false,
+                "options", Map.of(
+                    "temperature", 0.7,
+                    "num_predict", 500
+                )
         );
-        log.debug("Calling Ollama API: {}", url);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> response = restTemplate.postForObject(
-                url,
-                request,
-                Map.class
-        );
-        if (response != null && response.containsKey("response")) {
-            return (String) response.get("response");
+
+        log.info("Calling Ollama API: {} with model: {}", url, ollamaModel);
+
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restTemplate.postForObject(
+                    url,
+                    request,
+                    Map.class
+            );
+
+            if (response != null && response.containsKey("response")) {
+                String aiResponse = (String) response.get("response");
+                log.debug("Ollama response received: {} characters", aiResponse.length());
+                return aiResponse;
+            }
+
+            log.error("Invalid response from Ollama: {}", response);
+            throw new RuntimeException("Invalid response from Ollama - missing 'response' field");
+        } catch (Exception e) {
+            log.error("Failed to call Ollama API at {}: {}", url, e.getMessage());
+            throw new RuntimeException("Failed to connect to Ollama at " + url + ": " + e.getMessage(), e);
         }
-        throw new RuntimeException("Invalid response from Ollama");
     }
 
     private String truncate(String text, int maxLength) {

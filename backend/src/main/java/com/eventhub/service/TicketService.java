@@ -31,67 +31,75 @@ public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final EventRepository eventRepository;
-    // private final EmailService emailService; // TODO: Inject when ready
+    private final EmailService emailService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CONFIRMATION_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
     @Transactional
     public TicketResponse purchaseTicket(
-        PurchaseTicketRequest request,
-        User user
+            PurchaseTicketRequest request,
+            User user
     ) {
         log.info("User {} purchasing ticket for event {}",
-            user.getUsername(), request.eventId());
+                user.getUsername(), request.eventId());
         try {
-            Event event = eventRepository.findById(request.eventId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                    "Event not found with ID: " + request.eventId()
-                ));
+            // Use pessimistic locking to prevent race conditions
+            Event event = eventRepository.findByIdWithLock(request.eventId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Evento não encontrado com ID: " + request.eventId()
+                    ));
             validateEventAvailability(event);
             if (ticketRepository.userHasActiveTicketForEvent(user, event)) {
                 throw new BusinessException(
-                    "You already have a ticket for this event"
+                        "Você já possui um ingresso para este evento"
                 );
             }
             Participant participant = Participant.builder()
-                .name(request.getNormalizedParticipantName())
-                .email(request.getNormalizedParticipantEmail())
-                .build();
+                    .name(request.getNormalizedParticipantName())
+                    .email(request.getNormalizedParticipantEmail())
+                    .build();
             String confirmationCode = generateConfirmationCode();
             Ticket ticket = Ticket.builder()
-                .event(event)
-                .user(user)
-                .participant(participant)
-                .status(TicketStatus.ACTIVE)
-                .confirmationCode(confirmationCode)
-                .purchaseDate(LocalDateTime.now())
-                .build();
-            event.reserveCapacity();
-            eventRepository.save(event);
+                    .event(event)
+                    .user(user)
+                    .participant(participant)
+                    .status(TicketStatus.ACTIVE)
+                    .confirmationCode(confirmationCode)
+                    .purchaseDate(LocalDateTime.now())
+                    .build();
+
+            // Save the ticket (trigger no banco irá decrementar automaticamente)
             Ticket saved = ticketRepository.save(ticket);
+
+            // Send confirmation email (async - won't block the response)
+            emailService.sendTicketConfirmation(saved);
+
             log.info("Ticket purchased successfully: {} for event: {}",
-                saved.getConfirmationCode(), event.getName());
+                    saved.getConfirmationCode(), event.getName());
             return TicketResponse.fromEntity(saved);
         } catch (ObjectOptimisticLockingFailureException e) {
-            log.warn("Optimistic locking failure: Event {} sold out",
-                request.eventId());
+            log.warn("Falha de bloqueio otimista: Evento {} esgotado",
+                    request.eventId());
             throw new BusinessException(
-                "Sorry, this event just sold out. Please try another event."
+                    "Desculpe, este evento acabou de esgotar. Por favor, tente outro evento."
             );
         }
     }
+
     private void validateEventAvailability(Event event) {
         if (event.isPast()) {
             throw new BusinessException(
-                "Cannot purchase tickets for past events"
+                    "Não é possível comprar ingressos para eventos passados"
             );
         }
         if (!event.hasAvailableCapacity()) {
             throw new BusinessException(
-                "Event is sold out"
+                    "Evento esgotado"
             );
         }
     }
+
     private String generateConfirmationCode() {
         int maxAttempts = 10;
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
@@ -106,41 +114,45 @@ public class TicketService {
                 return confirmationCode;
             }
             log.warn("Confirmation code collision, retrying: {}",
-                confirmationCode);
+                    confirmationCode);
         }
         throw new BusinessException(
-            "Unable to generate unique confirmation code. Please try again."
+                "Unable to generate unique confirmation code. Please try again."
         );
     }
+
     @Transactional(readOnly = true)
     public TicketResponse getTicketById(UUID id) {
-        log.debug("Fetching ticket by ID: {}", id);
+        log.debug("Buscando ingresso por ID: {}", id);
         Ticket ticket = ticketRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException(
-                "Ticket not found with ID: " + id
-            ));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Ingresso não encontrado com ID: " + id
+                ));
         return TicketResponse.fromEntity(ticket);
     }
+
     @Transactional(readOnly = true)
     public TicketResponse getTicketByConfirmationCode(String confirmationCode) {
-        log.debug("Fetching ticket by confirmation code: {}",
-            confirmationCode);
+        log.debug("Buscando ingresso por código de confirmação: {}",
+                confirmationCode);
         Ticket ticket = ticketRepository
-            .findByConfirmationCodeWithEvent(confirmationCode)
-            .orElseThrow(() -> new ResourceNotFoundException(
-                "Ticket not found with confirmation code: " + confirmationCode
-            ));
+                .findByConfirmationCodeWithEvent(confirmationCode)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Ingresso não encontrado com código de confirmação: " + confirmationCode
+                ));
         return TicketResponse.fromEntity(ticket);
     }
+
     @Transactional(readOnly = true)
     public Page<TicketResponse> getUserTickets(User user, Pageable pageable) {
         log.debug("Fetching tickets for user: {}", user.getUsername());
         Page<Ticket> tickets = ticketRepository.findByUserWithEvent(
-            user,
-            pageable
+                user,
+                pageable
         );
         return tickets.map(TicketResponse::fromEntity);
     }
+
     @Transactional(readOnly = true)
     public List<TicketResponse> getUserActiveTickets(User user) {
         log.debug("Fetching active tickets for user: {}", user.getUsername());
@@ -148,54 +160,65 @@ public class TicketService {
         List<Ticket> tickets = ticketRepository.findActiveTicketsByUser(user);
 
         return tickets.stream()
-            .map(TicketResponse::fromEntity)
-            .toList();
+                .map(TicketResponse::fromEntity)
+                .toList();
     }
+
     @Transactional
     public TicketResponse cancelTicket(UUID ticketId, User user) {
-        log.info("User {} cancelling ticket {}",
-            user.getUsername(), ticketId);
+        log.info("Usuário {} cancelando ingresso {}",
+                user.getUsername(), ticketId);
         Ticket ticket = ticketRepository.findById(ticketId)
-            .orElseThrow(() -> new ResourceNotFoundException(
-                "Ticket not found with ID: " + ticketId
-            ));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Ingresso não encontrado com ID: " + ticketId
+                ));
         if (!ticket.belongsTo(user.getId())) {
             throw new BusinessException(
-                "You can only cancel your own tickets"
+                    "Você só pode cancelar seus próprios ingressos"
             );
         }
-        ticket.cancel();
+
+        // Validate if ticket can be cancelled (throws exception if not)
+        ticket.validateCanBeCancelled();
+
+        // Cancel the ticket (trigger no banco irá restaurar capacidade automaticamente)
+        ticket.setStatus(TicketStatus.CANCELLED);
         Ticket cancelled = ticketRepository.save(ticket);
-        log.info("Ticket cancelled successfully: {}",
-            cancelled.getConfirmationCode());
+
+        // Send cancellation confirmation email (async)
+        emailService.sendTicketCancellation(cancelled);
+
+        log.info("Ingresso cancelado com sucesso: {}",
+                cancelled.getConfirmationCode());
         return TicketResponse.fromEntity(cancelled);
     }
+
     @Transactional
     public TicketResponse checkInTicket(String confirmationCode) {
-        log.info("Checking in ticket: {}", confirmationCode);
+        log.info("Fazendo check-in do ingresso: {}", confirmationCode);
         Ticket ticket = ticketRepository
-            .findByConfirmationCodeWithEvent(confirmationCode)
-            .orElseThrow(() -> new ResourceNotFoundException(
-                "Ticket not found with confirmation code: " + confirmationCode
-            ));
+                .findByConfirmationCodeWithEvent(confirmationCode)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Ingresso não encontrado com código de confirmação: " + confirmationCode
+                ));
         ticket.use();
         Ticket checkedIn = ticketRepository.save(ticket);
-        log.info("Ticket checked in successfully: {} for {}",
-            checkedIn.getConfirmationCode(),
-            checkedIn.getParticipant().getName());
+        log.info("Check-in do ingresso realizado com sucesso: {} para {}",
+                checkedIn.getConfirmationCode(),
+                checkedIn.getParticipant().getName());
         return TicketResponse.fromEntity(checkedIn);
     }
 
     @Transactional(readOnly = true)
     public List<TicketResponse> getEventTickets(UUID eventId) {
-        log.debug("Fetching tickets for event: {}", eventId);
+        log.debug("Buscando ingressos para o evento: {}", eventId);
         Event event = eventRepository.findById(eventId)
-            .orElseThrow(() -> new ResourceNotFoundException(
-                "Event not found with ID: " + eventId
-            ));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Evento não encontrado com ID: " + eventId
+                ));
         List<Ticket> tickets = ticketRepository.findByEvent(event);
         return tickets.stream()
-            .map(TicketResponse::fromEntity)
-            .toList();
+                .map(TicketResponse::fromEntity)
+                .toList();
     }
 }
